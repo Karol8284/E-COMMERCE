@@ -59,6 +59,9 @@ Example:
 ```env
 ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=ecommerce;Username=postgres;Password=your_password
 ```
+## Test
+Tests Data created with AI help, it is easer and faster then manual.
+
 
 ## License
 
