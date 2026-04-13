@@ -7,9 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-// Configure DbContext - use DefaultConnection from secrets
+// Configure DbContext - use DefaultConnection from secrets or environment
 var connectionString = builder.Configuration["DefaultConnection"]
-    ?? throw new InvalidOperationException("DefaultConnection not found in configuration");
+    ?? builder.Configuration["DbConnectionString"]
+    ?? throw new InvalidOperationException("Connection string (DefaultConnection or DbConnectionString) not found in configuration");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -25,13 +26,17 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        // Create database schema from models
         await dbContext.Database.EnsureCreatedAsync();
+
         dbContext.SeedData();
         Console.WriteLine("✓ Database initialized successfully!");
     }
     catch (Exception ex)
     {
         Console.WriteLine($"✗ Database initialization failed: {ex.Message}");
+        // Don't crash the application if database initialization fails
     }
 }
 

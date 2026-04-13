@@ -1,44 +1,134 @@
-version: '3.8'
+# ===== PROFESSIONAL DOCKER COMPOSE CONFIGURATION =====
+# Best practices:
+# 1. Use .env file for sensitive data (create .env in this directory)
+# 2. Add .env to .gitignore
+# 3. Use environment variable substitution ${VAR:-default}
+# 4. Use health checks for service dependencies
+# 5. Use named volumes for persistent data
+# 6. Use custom networks for service communication
+# 7. Set resource limits to prevent runaway consumption
+# 8. Use alpine images for smaller footprint
 
 services:
+  # ===== PostgreSQL Database =====
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine  # Alpine = smaller, faster image (~200MB vs 500MB)
     container_name: ecommerce-postgres
+    restart: unless-stopped    # Auto-restart on failure, but not after manual stop
+
+    # Database configuration via environment variables
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Mk127398
-      POSTGRES_DB: ecommerce
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+      PGDATA: /var/lib/postgresql/data/pgdata
+
+    # Port exposure: [host_port]:[container_port]
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
+
+    # Data persistence
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      # Optional: initialization SQL script
+      # - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
-  api:
-    build:
-      context: .
-      dockerfile: API/Dockerfile
-    container_name: ecommerce-api
-    environment:
-      - DbConnectionString=Host=postgres;Port=5432;Database=ecommerce;Username=postgres;Password=Mk127398;
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ASPNETCORE_URLS=http://+:8080
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-    depends_on:
-      postgres:
-        condition: service_healthy
+    # Health check - API will not start until DB is healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ecommerce}"]
+      interval: 10s           # Check every 10 seconds
+      timeout: 5s             # Timeout after 5 seconds
+      retries: 5              # Fail after 5 retries
+      start_period: 10s       # Grace period before first check
+
     networks:
       - ecommerce-network
 
+    # Resource constraints
+    deploy:
+      resources:
+        limits:
+          cpus: '1'           # Maximum 1 CPU core
+          memory: 512M        # Maximum 512MB RAM
+        reservations:
+          cpus: '0.5'         # Minimum reserved
+          memory: 256M
+
+  # ===== ASP.NET Core API =====
+  api:
+    build:
+      context: .              # Build context (root directory)
+      dockerfile: API/Dockerfile
+      args:
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
+
+    container_name: ecommerce-api
+    restart: unless-stopped
+
+    # Application configuration
+    environment:
+      # Connection string - use service name "postgres" (not localhost)
+      # Inside Docker, service names resolve via internal DNS
+      - DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-ecommerce};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD};Pooling=true;MaxPoolSize=20;
+
+      # ASP.NET Core settings
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ASPNETCORE_URLS=http://+:8080;https://+:8081
+
+      # Logging
+      - Logging:LogLevel:Default=${LOG_LEVEL:-Information}
+      - Logging:LogLevel:Microsoft.EntityFrameworkCore=Warning
+
+    # Port mapping
+    ports:
+      - "${API_HTTP_PORT:-9080}:8080"
+      - "${API_HTTPS_PORT:-9081}:8081"
+
+    # Service startup order - wait for DB health check
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # Volume mounts for development
+    volumes:
+      - ./logs:/app/logs
+      # For development with hot reload (optional):
+      # - ./API/appsettings.Development.json:/app/appsettings.Development.json:ro
+
+    networks:
+      - ecommerce-network
+
+    # Health check for API (requires /health endpoint)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # Resource constraints
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+# ===== VOLUMES =====
+# Named volumes persist data between container restarts
 volumes:
   postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
 
+# ===== NETWORKS =====
+# Custom bridge network for inter-service communication
 networks:
   ecommerce-network:
     driver: bridge
