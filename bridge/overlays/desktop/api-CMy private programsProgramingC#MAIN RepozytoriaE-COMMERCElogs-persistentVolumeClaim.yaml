@@ -1,0 +1,9 @@
+#! api-C:\My private programs\Programing\C#\MAIN Repozytoria\E-COMMERCE\logs-persistentVolumeClaim.yaml
+# Generated code, do not edit
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: api-c--my-private-programs-programing-c--main-repozytoria-e-commerce-logs
+    namespace: e-commerce
+spec:
+    storageClassName: "hostpath" # see docker/desktop-storage-provisioner

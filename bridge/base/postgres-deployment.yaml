@@ -1,0 +1,61 @@
+#! postgres-deployment.yaml
+# Generated code, do not edit
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: postgres
+    namespace: e-commerce
+    labels:
+        com.docker.compose.project: e-commerce
+        com.docker.compose.service: postgres
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            com.docker.compose.project: e-commerce
+            com.docker.compose.service: postgres
+    strategy:
+        type: Recreate
+    template:
+        metadata:
+            labels:
+                com.docker.compose.project: e-commerce
+                com.docker.compose.service: postgres
+                com.docker.compose.network.ecommerce-network: "true"
+        spec:
+            restartPolicy: unless-stopped
+            containers:
+                - name: ecommerce-postgres
+                  image: postgres:16-alpine
+                  imagePullPolicy: IfNotPresent
+                  env:
+                    - name: PGDATA
+                      value: "/var/lib/postgresql/data/pgdata"
+                    - name: POSTGRES_DB
+                      value: "ecommerce"
+                    - name: POSTGRES_INITDB_ARGS
+                      value: "--encoding=UTF8 --locale=en_US.UTF-8"
+                    - name: POSTGRES_PASSWORD
+                      value: "Mk127398"
+                    - name: POSTGRES_USER
+                      value: "postgres"
+                  livenessProbe:
+                    exec:
+                        command:
+                            - /bin/sh
+                            - -c
+                            - pg_isready -U postgres -d ecommerce
+                    periodSeconds: 10
+                    initialDelaySeconds: 10
+                    timeoutSeconds: 5
+                    failureThreshold: 5
+                  ports:
+                    - name: postgres-5432
+                      containerPort: 5432
+                  volumeMounts:
+                    - name: var-lib-postgresql-data
+                      mountPath: /var/lib/postgresql/data
+            volumes:
+                - name: var-lib-postgresql-data
+                  persistentVolumeClaim:
+                    claimName: postgres-postgres-data

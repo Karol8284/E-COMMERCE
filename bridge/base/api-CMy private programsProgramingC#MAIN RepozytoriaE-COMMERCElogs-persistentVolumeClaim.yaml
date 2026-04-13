@@ -1,0 +1,18 @@
+#! api-C:\My private programs\Programing\C#\MAIN Repozytoria\E-COMMERCE\logs-persistentVolumeClaim.yaml
+# Generated code, do not edit
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: api-c--my-private-programs-programing-c--main-repozytoria-e-commerce-logs
+    namespace: e-commerce
+    labels:
+        com.docker.compose.service: api
+        com.docker.compose.volume: C:\My private programs\Programing\C#\MAIN Repozytoria\E-COMMERCE\logs
+spec:
+    accessModes:
+        # TODO would need to check which services use this volume
+        - ReadWriteOnce
+    volumeMode: Filesystem
+    resources:
+        requests:
+            storage: 100Mi

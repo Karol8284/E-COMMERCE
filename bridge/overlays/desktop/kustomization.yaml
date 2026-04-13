@@ -1,0 +1,11 @@
+#! kustomization.yaml
+# Generated code, do not edit
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+    - ../../base
+patches:
+    - path: api-C:\My private programs\Programing\C#\MAIN Repozytoria\E-COMMERCE\logs-persistentVolumeClaim.yaml
+    - path: api-service.yaml
+    - path: postgres-postgres_data-persistentVolumeClaim.yaml
+    - path: postgres-service.yaml

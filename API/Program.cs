@@ -1,16 +1,24 @@
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddFluentValidation(config =>
+    {
+        config.RegisterValidatorsFromAssemblyContaining<Program>();
+        config.DisableDataAnnotationsValidation = false;
+    });
 builder.Services.AddOpenApi();
 
-// Configure DbContext - use DefaultConnection from secrets or environment
+// Configure DbContext
 var connectionString = builder.Configuration["DefaultConnection"]
     ?? builder.Configuration["DbConnectionString"]
-    ?? throw new InvalidOperationException("Connection string (DefaultConnection or DbConnectionString) not found in configuration");
+    ?? throw new InvalidOperationException("Connection string not found");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -41,6 +49,10 @@ using (var scope = app.Services.CreateScope())
 }
 
 // Configure the HTTP request pipeline
+
+// Add exception handling middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

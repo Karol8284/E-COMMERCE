@@ -1,0 +1,27 @@
+# check if there is at least one published port
+
+#! api-service.yaml
+# Generated code, do not edit
+apiVersion: v1
+kind: Service
+metadata:
+    name: api-published
+    namespace: e-commerce
+    labels:
+        com.docker.compose.project: e-commerce
+        com.docker.compose.service: api
+spec:
+    selector:
+        com.docker.compose.project: e-commerce
+        com.docker.compose.service: api
+    ports:
+        - name: api-9080
+          port: 9080
+          protocol: TCP
+          targetPort: api-8080
+        - name: api-9081
+          port: 9081
+          protocol: TCP
+          targetPort: api-8081
+
+# check if there is at least one published port

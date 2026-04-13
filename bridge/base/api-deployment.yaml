@@ -1,0 +1,60 @@
+#! api-deployment.yaml
+# Generated code, do not edit
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: api
+    namespace: e-commerce
+    labels:
+        com.docker.compose.project: e-commerce
+        com.docker.compose.service: api
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            com.docker.compose.project: e-commerce
+            com.docker.compose.service: api
+    strategy:
+        type: Recreate
+    template:
+        metadata:
+            labels:
+                com.docker.compose.project: e-commerce
+                com.docker.compose.service: api
+                com.docker.compose.network.ecommerce-network: "true"
+        spec:
+            restartPolicy: unless-stopped
+            containers:
+                - name: ecommerce-api
+                  image: e-commerce-api
+                  imagePullPolicy: IfNotPresent
+                  env:
+                    - name: ASPNETCORE_ENVIRONMENT
+                      value: "Development"
+                    - name: ASPNETCORE_URLS
+                      value: "http://+:8080;https://+:8081"
+                    - name: DefaultConnection
+                      value: "Host=postgres;Port=5432;Database=ecommerce;Username=postgres;Password=Mk127398;Pooling=true;MaxPoolSize=20;"
+                    - name: Logging:LogLevel:Default
+                      value: "Information"
+                    - name: Logging:LogLevel:Microsoft.EntityFrameworkCore
+                      value: "Warning"
+                  livenessProbe:
+                    exec:
+                        command: ['curl -f http://localhost:8080/api/health || exit 1']
+                    periodSeconds: 30
+                    initialDelaySeconds: 20
+                    timeoutSeconds: 10
+                    failureThreshold: 3
+                  ports:
+                    - name: api-8081
+                      containerPort: 8081
+                    - name: api-8080
+                      containerPort: 8080
+                  volumeMounts:
+                    - name: app-logs
+                      mountPath: /app/logs
+            volumes:
+                - name: app-logs
+                  hostPath:
+                    path: C:\My private programs\Programing\C#\MAIN Repozytoria\E-COMMERCE\logs
