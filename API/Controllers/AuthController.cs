@@ -1,4 +1,5 @@
-﻿using API.Models.Dto.Auth;
+﻿using API.Filters;
+using API.Models.Dto.Auth;
 using API.Models.Dto.User;
 using CORE.Entities;
 using Infrastructure.Data;
@@ -9,6 +10,7 @@ namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [ValidationFilter]
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;

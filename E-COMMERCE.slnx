@@ -4,7 +4,7 @@
   </Folder>
   <Project Path="API/API.csproj" />
   <Project Path="CORE/CORE.csproj" />
-  <Project Path="Infrastucture/Infrastucture.csproj" />
+  <Project Path="Infrastucture/Infrastructure.csproj" />
   <Project Path="Shared/Shared.csproj" />
   <Project Path="Test/Test.csproj" />
 </Solution>

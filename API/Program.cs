@@ -1,8 +1,11 @@
-using Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using API.Filters;
+using API.Middleware;
+using CORE.Entities;
 using FluentValidation;
 using FluentValidation.AspNetCore;
-using API.Middleware;
+using Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +29,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Add Swagger
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddScoped<ValidationFilterAttribute>();
+
+//builder.Services.AddScoped<IProduct>
+
+
+
 var app = builder.Build();
 
 // Apply migrations and seed data automatically
@@ -47,6 +56,8 @@ using (var scope = app.Services.CreateScope())
         // Don't crash the application if database initialization fails
     }
 }
+
+
 
 // Configure the HTTP request pipeline
 
