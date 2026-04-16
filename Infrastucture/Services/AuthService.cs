@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Infrastructure.Services
 {
-    public class AuthService : 
+    public class AuthService
     {
 
 
