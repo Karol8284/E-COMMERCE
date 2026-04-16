@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Infrastructure.Services.Interfaces
+namespace CORE.Interfaces.Services
 {
-    internal interface IProductService
+    internal class CompanyService
     {
     }
 }
