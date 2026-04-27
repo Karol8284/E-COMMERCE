@@ -4,6 +4,7 @@ using CORE.Entities;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Infrastructure.Data;
+using Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
@@ -47,6 +48,9 @@ try
 
     // Add Swagger
     builder.Services.AddSwaggerGen();
+
+    // Register JWT Token Service for token generation and validation
+    builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
     builder.Services.AddScoped<ValidationFilterAttribute>();
 

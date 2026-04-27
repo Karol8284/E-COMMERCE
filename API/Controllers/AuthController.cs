@@ -3,6 +3,7 @@ using API.Models.Dto.Auth;
 using API.Models.Dto.User;
 using CORE.Entities;
 using Infrastructure.Data;
+using Infrastructure.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,10 +15,14 @@ namespace API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IJwtTokenService _jwtTokenService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(AppDbContext context)
+        public AuthController(AppDbContext context, IJwtTokenService jwtTokenService, ILogger<AuthController> logger)
         {
             _context = context;
+            _jwtTokenService = jwtTokenService;
+            _logger = logger;
         }
 
         /// <summary>
@@ -124,18 +129,37 @@ namespace API.Controllers
                     Message = "Invalid email or password"
                 });
 
-            return Ok(new AuthResponseDto
+            // Generate JWT tokens
+            try
             {
-                Success = true,
-                Message = "Login successful",
-                User = new AuthUserDto
+                var tokens = await _jwtTokenService.GenerateTokensAsync(user);
+                _logger.LogInformation("JWT tokens generated successfully for user {UserId}", user.Id);
+
+                return Ok(new
                 {
-                    Id = user.Id,
-                    Email = user.Email,
-                    DisplayName = user.DisplayName,
-                    Role = user.Role.ToString()
-                }
-            });
+                    success = true,
+                    message = "Login successful",
+                    accessToken = tokens.AccessToken,
+                    refreshToken = tokens.RefreshToken,
+                    expiresIn = 900, // 15 minutes in seconds
+                    user = new AuthUserDto
+                    {
+                        Id = user.Id,
+                        Email = user.Email,
+                        DisplayName = user.DisplayName,
+                        Role = user.Role.ToString()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating JWT tokens for user {UserId}", user.Id);
+                return StatusCode(500, new AuthResponseDto
+                {
+                    Success = false,
+                    Message = "An error occurred during token generation"
+                });
+            }
         }
 
         /// <summary>
@@ -159,6 +183,85 @@ namespace API.Controllers
                 IsEmailConfirmed = user.IsEmailConfirmed,
                 CreatedAt = user.CreatedAt
             });
+        }
+
+        /// <summary>
+        /// Refresh JWT access token using a valid refresh token
+        /// </summary>
+        [HttpPost("refresh")]
+        public async Task<ActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.RefreshToken))
+                return BadRequest(new { success = false, message = "Refresh token is required" });
+
+            try
+            {
+                // Validate refresh token - check if revoked
+                var isRevoked = await _jwtTokenService.IsTokenRevokedAsync(request.RefreshToken);
+                if (isRevoked)
+                {
+                    _logger.LogWarning("Attempted to refresh with revoked token");
+                    return Unauthorized(new { success = false, message = "Refresh token is revoked" });
+                }
+
+                // Validate and extract claims from refresh token
+                var principal = await _jwtTokenService.ValidateTokenAsync(request.RefreshToken);
+                if (principal == null)
+                {
+                    _logger.LogWarning("Invalid or expired refresh token");
+                    return Unauthorized(new { success = false, message = "Invalid or expired refresh token" });
+                }
+
+                // Extract user ID from claims
+                var userIdClaim = principal.FindFirst("sub")?.Value ?? principal.FindFirst("nameid")?.Value;
+                if (!Guid.TryParse(userIdClaim, out var userId))
+                {
+                    _logger.LogWarning("Could not extract user ID from token claims");
+                    return Unauthorized(new { success = false, message = "Invalid token claims" });
+                }
+
+                // Get user from database
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+                if (user == null)
+                {
+                    _logger.LogWarning("User {UserId} not found for token refresh", userId);
+                    return Unauthorized(new { success = false, message = "User not found" });
+                }
+
+                if (!user.IsActive)
+                {
+                    _logger.LogWarning("Inactive user {UserId} attempted token refresh", userId);
+                    return Unauthorized(new { success = false, message = "User account is inactive" });
+                }
+
+                // Generate new token pair
+                var newTokens = await _jwtTokenService.GenerateTokensAsync(user);
+                
+                // Revoke old refresh token
+                await _jwtTokenService.RevokeTokenAsync(request.RefreshToken);
+                _logger.LogInformation("Tokens refreshed successfully for user {UserId}", userId);
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Token refreshed successfully",
+                    accessToken = newTokens.AccessToken,
+                    refreshToken = newTokens.RefreshToken,
+                    expiresIn = 900, // 15 minutes in seconds
+                    user = new AuthUserDto
+                    {
+                        Id = user.Id,
+                        Email = user.Email,
+                        DisplayName = user.DisplayName,
+                        Role = user.Role.ToString()
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing token");
+                return StatusCode(500, new { success = false, message = "An error occurred during token refresh" });
+            }
         }
     }
 }

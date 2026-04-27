@@ -5,7 +5,7 @@
   <Project Path="../../../../../../../../My Private programs/Programing/CSharp/MAIN Repozytoria/E-COMMERCE/API/API.csproj" />
   <Project Path="../../../../../../../../My Private programs/Programing/CSharp/MAIN Repozytoria/E-COMMERCE/CORE/CORE.csproj" />
   <Project Path="../../../../../../../../My Private programs/Programing/CSharp/MAIN Repozytoria/E-COMMERCE/Infrastucture/Infrastructure.csproj" Id="43082a83-f0d0-78a6-d635-d29f41fd5f4e">
-    <Build Solution="Debug|*" Project="false" />
+    <Build Solution="Debug|*" Project="true" />
   </Project>
   <Project Path="../../../../../../../../My Private programs/Programing/CSharp/MAIN Repozytoria/E-COMMERCE/Shared/Shared.csproj" />
   <Project Path="../../../../../../../../My Private programs/Programing/CSharp/MAIN Repozytoria/E-COMMERCE/Test/Test.csproj" />
